@@ -1,12 +1,60 @@
 from django.shortcuts import render
+from django.db import models
 
-from .serializers import GameSerializer
+from .serializers import GamesListSerializer, GamesDetailSerializer, ReviewCreateSerializer, RatingSerializer, GamesSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework import generics, permissions
 from .models import Game
 
-class GameList(APIView):
+class GamesList(APIView):
     def get(self, request):
-        games = Game.objects.all()
-        serializer = GameSerializer(games, many=True)
+        if request.user.is_authenticated:
+            games = Game.objects.all().annotate(
+                rating_user = models.Count('ratings', filter=models.Q(ratings__user = request.user))
+            ).annotate(
+                middle_star = models.Sum(models.F('ratings__star')) / models.Count(models.F('ratings'))
+            )
+            serializer = GamesListSerializer(games, many=True)
+        else:
+            games = Game.objects.all()
+            serializer = GamesSerializer(games, many=True)
         return Response(serializer.data)
+    
+
+class GamesDetail(APIView):
+    def get(self, request, pk):
+        game = Game.objects.get(pk=pk)
+        serializer = GamesDetailSerializer(game)
+        return Response(serializer.data)
+
+
+class ReviewCreateView(APIView):
+    permission_classes = [permissions.IsAuthenticated, ]
+    def post(self, request):
+        serializer = ReviewCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(status=201)
+    
+# class AddStarRatingView(APIView):
+#     def post(self, request): 
+#         serializer = RatingSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save(user=request.user)
+#             return Response(status=201)
+#         else:
+#             return Response(status=400)
+        
+class AddStarRatingView(generics.CreateAPIView):
+    
+    serializer_class = RatingSerializer
+    permission_classes = [permissions.IsAuthenticated, ]
+
+    # при сохранении нам нужно указывать user
+    def perform_create(self, serializer):
+        serializer.save(user = self.request.user)
+        
+
+       
+    

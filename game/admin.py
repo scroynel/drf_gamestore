@@ -1,10 +1,20 @@
 from django.contrib import admin
 
-from .models import Game, Genre, Developer, Review
+from .models import Game, Genre, Developer, Review, Rating, RatingStar
 
 
 admin.site.register(Game)
-admin.site.register(Review)
+
+
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ('id', '__str__')
+admin.site.register(Review, ReviewAdmin)
+
+admin.site.register(Rating)
+
+class RatingStarAdmin(admin.ModelAdmin):
+    list_display = ('id', 'value')
+admin.site.register(RatingStar, RatingStarAdmin)
 
 
 class GenreAdmin(admin.ModelAdmin):

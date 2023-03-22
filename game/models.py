@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.db.models import Avg
 
 LANGUAGES = [(1, 'English'), (2, 'Russian'), (3, 'Ukrainian')]
 
@@ -6,7 +8,7 @@ LANGUAGES = [(1, 'English'), (2, 'Russian'), (3, 'Ukrainian')]
 class Game(models.Model):
     name = models.CharField('Навание игры', max_length=255)
     description = models.TextField('Описание игры')
-    language = models.IntegerField('Языки', choices=LANGUAGES, default=3, max_length=255)
+    language = models.IntegerField('Языки', choices=LANGUAGES, default=3)
     platform = models.CharField('Платформа', max_length=255)
     type = models.CharField('Тип', default='RePack', max_length=255)
     genres = models.ManyToManyField('Genre')
@@ -14,6 +16,10 @@ class Game(models.Model):
 
     def __str__(self):
         return self.name
+    
+    @property
+    def average_rating(self):
+        return self.ratings.aggregate(Avg('star'))['star__avg']
     
 
 class Genre(models.Model):
@@ -45,5 +51,21 @@ class Review(models.Model):
         return f'{self.name} --- {self.game}'
 
 
+class RatingStar(models.Model):
+    value = models.SmallIntegerField('Значение', default=0, auto_created=0)
 
+    def __str__(self):
+        return f'{self.value}'
+    
+    class Meta:
+        ordering = ["-value"]
+    
+class Rating(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
+    star = models.ForeignKey('RatingStar', on_delete=models.CASCADE, related_name='star')
+    game = models.ForeignKey('Game', on_delete=models.CASCADE, related_name='ratings')
 
+    def __str__(self):
+        return f'{self.star} --- {self.user} --- {self.game}'
+    
+    
