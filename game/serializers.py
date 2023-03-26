@@ -51,6 +51,7 @@ class GamesSerializer(serializers.ModelSerializer):
 class RatingSerializer(serializers.ModelSerializer):
   
     user = serializers.SlugRelatedField(slug_field='username', read_only=True)
+    game = serializers.SlugRelatedField(slug_field='name', read_only=True)
     class Meta:
         model = Rating
         fields = ['user', 'star', 'game']

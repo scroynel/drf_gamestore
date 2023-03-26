@@ -4,29 +4,60 @@ from django.db import models
 from .serializers import GamesListSerializer, GamesDetailSerializer, ReviewCreateSerializer, RatingSerializer, GamesSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import generics, permissions
+from rest_framework import permissions, viewsets, generics
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.decorators import action
 from .models import Game
+from .services import GamesFilter
 
-class GamesList(APIView):
-    def get(self, request):
-        if request.user.is_authenticated:
+# class GamesList(APIView):
+#     filter_beckends = (DjangoFilterBackend,)
+#     filterset_class = GamesFilter
+
+#     def get(self, request):
+#         if request.user.is_authenticated:
+#             games = Game.objects.all().annotate(
+#                 rating_user = models.Count('ratings', filter=models.Q(ratings__user = request.user))
+#             ).annotate(
+#                 middle_star = models.Sum(models.F('ratings__star')) / models.Count(models.F('ratings'))
+#             )
+#             serializer = GamesListSerializer(games, many=True)
+#         else:
+#             games = Game.objects.all()
+#             serializer = GamesSerializer(games, many=True)
+#         return Response(serializer.data)
+
+class GamesList(viewsets.ReadOnlyModelViewSet):
+    filter_beckends = (DjangoFilterBackend,)
+    filterset_class = GamesFilter
+
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
             games = Game.objects.all().annotate(
-                rating_user = models.Count('ratings', filter=models.Q(ratings__user = request.user))
+                rating_user = models.Count('ratings', filter=models.Q(ratings__user = self.request.user))
             ).annotate(
                 middle_star = models.Sum(models.F('ratings__star')) / models.Count(models.F('ratings'))
             )
-            serializer = GamesListSerializer(games, many=True)
         else:
             games = Game.objects.all()
-            serializer = GamesSerializer(games, many=True)
-        return Response(serializer.data)
     
+        return games
 
-class GamesDetail(APIView):
-    def get(self, request, pk):
-        game = Game.objects.get(pk=pk)
-        serializer = GamesDetailSerializer(game)
-        return Response(serializer.data)
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return GamesListSerializer
+        elif self.action == 'retrieve':
+            return GamesDetailSerializer
+
+
+
+# class GamesDetail(APIView):
+#     def get(self, request, pk):
+#         game = Game.objects.get(pk=pk)
+#         serializer = GamesDetailSerializer(game)
+#         return Response(serializer.data)
 
 
 class ReviewCreateView(APIView):
